@@ -8,12 +8,10 @@ from datetime import datetime, timedelta
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 from urllib.parse import urlparse
-from dotenv import load_dotenv
 
-# Load API credentials from .env locally or environment variables in production
-load_dotenv()
-API_KEY = os.getenv("GOOGLE_API_KEY", "")
-CSE_ID = os.getenv("GOOGLE_CSE_ID", "")
+# Load API credentials from environment variables (more secure)
+API_KEY = os.getenv("GOOGLE_API_KEY", "AIzaSyCtcz_viHAADq3OIBIvi_is-vCmpb01TEk")
+CSE_ID = os.getenv("GOOGLE_CSE_ID", "d3deb6056c8744d3b")
 PAGESPEED_API_KEY = os.getenv("PAGESPEED_API_KEY", "")  # Optional: PageSpeed Insights API key
 
 # Pre-compiled regex for better performance
