@@ -12,6 +12,7 @@ from urllib.parse import urlparse
 from dotenv import load_dotenv
 from pathlib import Path
 from search_api import search_serper
+from discovery import inspect_html
 
 load_dotenv(Path(__file__).with_name('.env'))
 
@@ -29,7 +30,6 @@ PAGESPEED_API_KEY = setting('PAGESPEED_API_KEY')
 
 # Pre-compiled regex for better performance
 DATE_PATTERN = re.compile(r'(\w+\s\d{1,2},\s\d{4})|(\d{4}-\d{2}-\d{2})')
-ADS_SIGNALS = {'googleads', 'gclid', 'utm_source', 'fbclid', 'affiliate', 'pixel'}
 
 # Session with connection pooling and retries
 @st.cache_resource
@@ -113,7 +113,7 @@ def search_projects(query, num_results):
 
 @st.cache_data(ttl=3600)
 def has_ads_signals(url):
-    """Check for advertising signals in HTML (cached for 1 hour)"""
+    """Separate affiliate evidence from specific Ads conversion tags."""
     try:
         session = get_session()
         response = session.get(
@@ -123,16 +123,11 @@ def has_ads_signals(url):
             allow_redirects=True
         )
         response.raise_for_status()
-        html_lower = response.text.lower()
-        return any(sig in html_lower for sig in ADS_SIGNALS)
-    except requests.exceptions.Timeout:
-        st.warning(f"⚠️ Timeout khi kiểm tra: {url}")
-        return False
+        evidence = inspect_html(response.text)
+        evidence['final_url'] = response.url
+        return evidence
     except requests.exceptions.RequestException:
-        return False
-    except Exception as e:
-        st.error(f"❌ Lỗi khi phân tích {url}: {type(e).__name__}")
-        return False
+        return {'affiliate': False, 'ads': [], 'checked': False}
 
 
 def extract_project_date(item):

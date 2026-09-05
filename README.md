@@ -35,8 +35,12 @@ Biến môi trường (bao gồm `.env`) được ưu tiên trước Streamlit S
 ## Sử dụng
 
 - Tối đa 100 kết quả; nhiều domain cách nhau bằng dấu phẩy.
-- Gọi Serper theo trang 10 kết quả. Một lần lọc có thể dùng nhiều lượt API và trả ít hơn số kết quả đã chọn.
-- Tín hiệu HTML không chứng minh website đang mua Google Ads.
+- Tìm bằng tối đa 6 truy vấn theo ngách thay vì một truy vấn duy nhất. Dùng tối đa 6 lượt API khi chọn 10–30 kết quả, 12 khi chọn 50, 18 khi chọn 100. Có thể trả ít hơn số đã chọn.
+- Chấm điểm theo tiêu đề/mô tả, URL chương trình, thông tin tham gia/hoa hồng và từ khóa. Đây là điểm quy tắc, không phải xác suất hoặc xác nhận trang chính thức.
+- Mặc định bỏ bài tổng hợp/hướng dẫn; có tùy chọn bao gồm bài tham khảo. Gộp subdomain theo tên miền đăng ký (hỗ trợ co.uk và tên miền nền tảng riêng), tối đa một kết quả mỗi tên miền gốc.
+- Kết quả là ứng viên chương trình affiliate. Không yêu cầu mã Ads trừ khi bật bộ lọc tương ứng. Chỉ AW conversion ID hoặc URL conversion cụ thể được ghi nhận là mã Ads; affiliate, pixel, gclid hoặc Google Analytics riêng lẻ không được coi là Google Ads.
+- Tín hiệu HTML không chứng minh website đang mua Google Ads. Trang tải lỗi vẫn có thể xuất hiện với nhãn “Chưa kiểm tra được”.
+- Xem bằng chứng, truy vấn nguồn và trạng thái affiliate trong phần chi tiết hoặc file xuất.
 - Ngày từ kết quả tìm kiếm không nhất thiết là ngày ra mắt dự án; thiếu ngày sẽ hiển thị “Không rõ”.
 - CSV hỗ trợ tiếng Việt trong Excel; JSON lưu toàn bộ kết quả.
 - API lỗi sẽ giữ kết quả lần trước và báo lỗi, không coi là lượt tìm thành công.
@@ -52,7 +56,7 @@ Biến môi trường (bao gồm `.env`) được ưu tiên trước Streamlit S
 ## Kiểm tra
 
 ```bash
-python -m unittest test_search_api
+python -m unittest test_search_api test_discovery
 ```
 
 Kiểm tra dùng dữ liệu giả lập, không tiêu tốn credits. Cần key thật để kiểm tra kết nối Serper thực tế.

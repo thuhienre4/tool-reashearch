@@ -1,0 +1,57 @@
+import unittest
+from pathlib import Path
+from streamlit.testing.v1 import AppTest
+
+FIXTURE = '''
+import streamlit as st
+import pandas as pd
+from ui import render
+def search(query, count):
+    return [{'title': 'Travel Affiliate Program', 'snippet': 'Join our affiliate program and earn commission', 'link': 'https://brand.co.uk/affiliate'},
+            {'title': 'Travel Affiliate Program', 'snippet': 'Join and earn commission', 'link': 'https://partners.brand.co.uk/affiliate'}]
+def detect(url):
+    return {'affiliate': True, 'ads': [], 'checked': True, 'final_url': url}
+def info(item):
+    return {'Domain': 'brand.co.uk', 'Tiêu đề': item['title'], 'Mô tả': item['snippet'], 'Thời gian ra mắt': 'Không rõ', 'Link thông tin dự án': item['link'], 'Link đăng ký': item['link'], 'PageSpeed Metrics': None}
+render(st, pd, search, detect, info, lambda url: url.split('/')[2])
+'''
+
+
+class DashboardTests(unittest.TestCase):
+    def test_real_app_loads(self):
+        app = AppTest.from_file(str(Path(__file__).with_name('ads.py')), default_timeout=30).run()
+        self.assertFalse(app.exception)
+
+    def test_diversity_evidence_and_strict_filter(self):
+        app = AppTest.from_string(FIXTURE).run()
+        app.selectbox[0].set_value('Travel')
+        app.button[1].click().run()
+        self.assertFalse(app.exception)
+        rows = app.session_state['ket_qua_loc']
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(rows[0]['Domain'], 'brand.co.uk')
+        self.assertEqual(rows[0]['Google Ads'], 'Không thấy mã Ads')
+        self.assertTrue(rows[0]['Bằng chứng'])
+        self.assertEqual(len(app.dataframe), 1)
+        app.checkbox[1].set_value(True)
+        app.button[1].click().run()
+        self.assertFalse(app.exception)
+        self.assertEqual(app.session_state['ket_qua_loc'], [])
+        app.button[0].click().run()
+        self.assertFalse(app.checkbox[1].value)
+        self.assertEqual(app.session_state['discovery_stats'], {})
+
+    def test_failure_preserves_previous_results(self):
+        fixture = FIXTURE.replace("def search(query, count):", "def search(query, count):\n    if st.session_state.get('force_error'):\n        from search_api import SearchError\n        raise SearchError('No credits')")
+        app = AppTest.from_string(fixture).run()
+        app.button[1].click().run()
+        old_rows = app.session_state['ket_qua_loc']
+        app.session_state['force_error'] = True
+        app.button[1].click().run()
+        self.assertFalse(app.exception)
+        self.assertEqual(app.session_state['ket_qua_loc'], old_rows)
+        self.assertTrue(app.error)
+
+
+if __name__ == '__main__':
+    unittest.main()

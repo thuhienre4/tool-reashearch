@@ -3,6 +3,7 @@ from pathlib import Path
 from time import perf_counter
 import json
 from search_api import SearchError
+from discovery import discover, root_domain
 
 
 def render(st, pd, search, detect, project_info, extract_domain):
@@ -11,11 +12,11 @@ def render(st, pd, search, detect, project_info, extract_domain):
     st.markdown('''<nav class="nav"><a class="brand" href="#"><span class="brand-icon">⌕</span>Affi<span>Scan</span><small>Beta</small></a><div class="nav-links"><a class="active" href="#">⌂ &nbsp; Trang chủ</a><a href="#huong-dan">ⓘ &nbsp; Hướng dẫn</a><a href="#ket-qua">▤ &nbsp; Kết quả</a></div><a class="docs" href="#huong-dan">▣ &nbsp; Tài liệu hướng dẫn</a></nav>
 <section class="hero"><div class="hero-copy"><span class="eyebrow">✧ Công cụ SEO & Affiliate Marketing</span><h1>AffiScan - Bộ Lọc Dự Án <em>Affiliate</em><br>Có Quảng Cáo <em>Google</em></h1><p>Tìm kiếm, phân tích và lọc các dự án/website affiliate có dấu hiệu quảng cáo Google<br>để khám phá từ khóa, ngách tiềm năng và cơ hội kinh doanh.</p></div><div class="hero-art"><div class="orbit"></div><div class="analytics"><div class="window-dots">● ● ●</div><div class="ad-logo">A</div><b>Google Ads</b><div class="search-line">⌕</div><div class="bars"><i></i><i></i><i></i><i></i></div></div><div class="float-card data">▥ <span>Dữ liệu thực tế<br><b>Cập nhật liên tục</b></span></div><div class="float-card growth">↗ <span>Tìm cơ hội<br><b>Nhanh hơn</b></span></div><div class="float-card shield">◆ <span>Phân tích đối thủ<br><b>dễ dàng</b></span></div></div></section>''', unsafe_allow_html=True)
     industries = ['WordPress', 'AI', 'Marketing', 'Edu LMS', 'Travel', 'Game', 'Bitcoin', 'finance app', 'E-commerce', 'Digital Tools & Services', 'Hosting', 'Online Education', 'Software', 'Baby Products', 'Remote Work Tools', 'Hosting & Website Building', 'Pet Products']
-    for key, value in dict(ket_qua_loc=[], elapsed=0, searched=False, keywords='', count=20).items():
+    for key, value in dict(ket_qua_loc=[], elapsed=0, searched=False, keywords='', count=20, discovery_stats={}, include_roundups=False, require_ads=False).items():
         st.session_state.setdefault(key, value)
 
     def reset():
-        st.session_state.update(industry='WordPress', domains='', keyword='', count=20, ket_qua_loc=[], elapsed=0, searched=False, keywords='')
+        st.session_state.update(industry='WordPress', domains='', keyword='', count=20, ket_qua_loc=[], elapsed=0, searched=False, keywords='', discovery_stats={}, include_roundups=False, require_ads=False)
 
     left, right = st.columns([1.55, 1], gap='small')
     with left, st.container(border=True):
@@ -37,6 +38,9 @@ def render(st, pd, search, detect, project_info, extract_domain):
             with b:
                 count = st.selectbox('☷ Số kết quả', [10, 20, 30, 50, 100], key='count')
                 st.caption('Tối đa 100 kết quả. Các domain cách nhau bằng dấu phẩy.')
+            st.checkbox('Bao gồm bài tổng hợp / hướng dẫn', key='include_roundups')
+            st.checkbox('Chỉ giữ trang có mã Google Ads', key='require_ads')
+            st.caption('Ưu tiên trang chương trình, tối đa 1 kết quả mỗi tên miền gốc. Tìm rộng dùng tối đa 6–18 lượt Serper, tùy số kết quả; có thể tìm được ít hơn số đã chọn.')
             submitted = st.form_submit_button('⌕  Bắt đầu lọc dự án  →', type='primary', use_container_width=True)
     with right:
         benefits = [('green', '◎', 'Tiết kiệm thời gian', 'Tìm nhanh các dự án có tín hiệu quảng cáo thay vì tìm thủ công.'), ('blue', '▥', 'Dữ liệu đáng tin cậy', 'Tra cứu từ Google, phân tích tín hiệu trên website.'), ('orange', '♧', 'Tìm cơ hội dễ dàng', 'Phát hiện ngách tiềm năng, đối thủ và từ khóa cho chiến lược affiliate.'), ('purple', '◈', 'Hỗ trợ SEO & Marketing', 'Phù hợp cho blogger, affiliate marketer, SEOer và website review.')]
@@ -47,26 +51,31 @@ def render(st, pd, search, detect, project_info, extract_domain):
         with st.spinner('Đang truy vấn Google và phân tích website...'):
             try:
                 hosts = [extract_domain('https://' + d.strip().removeprefix('https://').removeprefix('http://')).lower() for d in domains.split(',') if d.strip()]
-                query = industry + ' affiliate project ' + keyword.strip()
-                if hosts:
-                    query += ' (' + ' OR '.join('site:' + d for d in hosts) + ')'
-                results = search(query, count)[:count]
+                results, discovery_stats = discover(search, industry, keyword.strip(), hosts, count, st.session_state.include_roundups)
                 rows = []
+                final_domains = set()
                 progress = st.progress(0)
                 for idx, item in enumerate(results):
                     link = item.get('link', '').strip()
-                    host = extract_domain(link).lower()
-                    if (not hosts or any(host == d or host.endswith('.' + d) for d in hosts)) and detect(link):
+                    evidence = detect(link)
+                    final_link = evidence.get('final_url', link)
+                    final_host = extract_domain(final_link).lower()
+                    final_domain = root_domain(final_link)
+                    allowed = not hosts or any(final_host == d or final_host.endswith('.' + d) for d in hosts)
+                    if allowed and final_domain not in final_domains and (not st.session_state.require_ads or evidence['ads']):
                         row = project_info(item)
-                        row.update({'Ngành': industry, 'Từ khóa liên quan': keyword.strip() or industry})
+                        final_domains.add(final_domain)
+                        row.update({'Domain': final_domain, 'Ngành': industry, 'Từ khóa liên quan': keyword.strip() or industry,
+                                    'Điểm phù hợp': item['rank_score'],
+                                    'Loại trang': 'Bài tham khảo' if item['roundup'] else 'Ứng viên chương trình',
+                                    'Affiliate': 'Có nội dung chương trình trên trang' if evidence['affiliate'] else 'Theo kết quả tìm kiếm; cần xác minh',
+                                    'Google Ads': 'Có mã theo dõi Ads' if evidence['ads'] else 'Không thấy mã Ads' if evidence['checked'] else 'Chưa kiểm tra được',
+                                    'Bằng chứng': '; '.join(item['reasons'] + evidence['ads']),
+                                    'Truy vấn nguồn': item['source_query'], 'URL sau chuyển hướng': final_link})
                         rows.append(row)
                     progress.progress((idx + 1) / len(results))
                 progress.empty()
-                def date_key(row):
-                    value = pd.to_datetime(row.get('Thời gian ra mắt'), errors='coerce', utc=True)
-                    return value.value if pd.notna(value) else -9223372036854775808
-                rows.sort(key=date_key, reverse=True)
-                st.session_state.update(ket_qua_loc=rows, elapsed=round(perf_counter() - started, 1), searched=True, keywords=keyword.strip() or industry)
+                st.session_state.update(ket_qua_loc=rows, elapsed=round(perf_counter() - started, 1), searched=True, keywords=keyword.strip() or industry, discovery_stats=discovery_stats)
             except SearchError as exc:
                 st.error(str(exc))
                 st.info('Lượt tìm kiếm chưa hoàn tất. Kết quả của lần tìm trước (nếu có) được giữ lại.')
@@ -85,13 +94,16 @@ def render(st, pd, search, detect, project_info, extract_domain):
         with save_col:
             st.download_button('♧ Lưu kết quả', json.dumps(rows, ensure_ascii=False, indent=2), 'affiscan.json', 'application/json', disabled=not rows, use_container_width=True)
         if rows:
-            table = [{'#': i, 'Domain': r['Domain'], 'Tên dự án': r['Tiêu đề'], 'Ngành': r.get('Ngành', ''), 'Từ khóa liên quan': r.get('Từ khóa liên quan', ''), 'Quảng cáo': 'Có tín hiệu', 'Hành động': r['Link thông tin dự án']} for i, r in enumerate(rows, 1)]
+            table = [{'#': i, 'Domain': r['Domain'], 'Tên dự án': r['Tiêu đề'], 'Ngành': r.get('Ngành', ''), 'Điểm phù hợp': r.get('Điểm phù hợp', 0), 'Loại trang': r.get('Loại trang', ''), 'Google Ads': r.get('Google Ads', 'Chưa xác minh'), 'Hành động': r['Link thông tin dự án']} for i, r in enumerate(rows, 1)]
             st.dataframe(pd.DataFrame(table), hide_index=True, use_container_width=True, column_config={'Hành động': st.column_config.LinkColumn('Hành động', display_text='Xem dự án ↗')})
-            st.caption('Tín hiệu trên website không xác nhận dự án đang chạy Google Ads.')
+            st.caption('Điểm phù hợp là điểm xếp hạng theo quy tắc, không phải xác suất chính xác. Mã Google Ads không chứng minh chiến dịch đang chạy. Trang chương trình vẫn cần xác minh trước khi tham gia.')
             with st.expander('Chi tiết dự án & PageSpeed'):
                 for row in rows:
                     st.write('**' + row['Tiêu đề'] + '**')
                     st.write(row['Mô tả'])
+                    st.write('Affiliate: ' + row.get('Affiliate', 'Chưa xác minh'))
+                    st.write('Bằng chứng: ' + row.get('Bằng chứng', ''))
+                    st.write('Truy vấn nguồn: ' + row.get('Truy vấn nguồn', ''))
                     st.write('Thời gian ra mắt: ' + row['Thời gian ra mắt'])
                     st.link_button('Đăng ký / xem dự án ↗', row['Link đăng ký'])
                     if row.get('PageSpeed Metrics'):
@@ -99,6 +111,9 @@ def render(st, pd, search, detect, project_info, extract_domain):
         else:
             message = 'Không tìm thấy kết quả phù hợp' if st.session_state.searched else 'Chưa có kết quả'
             st.markdown(f'<div class="empty-table"><div class="table-head"><span>#</span><span>Domain</span><span>Tên dự án</span><span>Ngành</span><span>Từ khóa liên quan</span><span>Quảng cáo</span><span>Hành động</span></div><div class="empty"><div class="empty-icon">⌕</div><b>{message}</b><p>Vui lòng thiết lập bộ lọc và nhấn “Bắt đầu lọc dự án” để xem kết quả.</p></div></div>', unsafe_allow_html=True)
+    if st.session_state.discovery_stats:
+        summary = st.session_state.discovery_stats
+        st.caption(f"Đã tìm bằng {summary['queries']} truy vấn, đánh giá {summary['candidates']} URL khác nhau và giữ {len(rows)} tên miền. Không thêm kết quả kém phù hợp chỉ để đủ số lượng.")
     st.markdown('<div id="huong-dan"></div>', unsafe_allow_html=True)
     with st.expander('ⓘ Hướng dẫn sử dụng'):
         st.write('Chọn ngành, nhập tên miền hoặc từ khóa tùy chọn, rồi nhấn Bắt đầu lọc dự án. Xuất CSV để mở kết quả trong Excel hoặc Lưu kết quả để tải dữ liệu JSON.')
