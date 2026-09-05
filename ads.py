@@ -9,10 +9,24 @@ from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 from urllib.parse import urlparse
 
-# Load API credentials from environment variables (more secure)
-API_KEY = os.getenv("GOOGLE_API_KEY", "AIzaSyCtcz_viHAADq3OIBIvi_is-vCmpb01TEk")
-CSE_ID = os.getenv("GOOGLE_CSE_ID", "d3deb6056c8744d3b")
-PAGESPEED_API_KEY = os.getenv("PAGESPEED_API_KEY", "")  # Optional: PageSpeed Insights API key
+from dotenv import load_dotenv
+from pathlib import Path
+from search_api import search_google
+
+load_dotenv(Path(__file__).with_name('.env'))
+
+def setting(name):
+    value = os.getenv(name)
+    if value is None:
+        try:
+            value = st.secrets.get(name, '')
+        except (FileNotFoundError, st.errors.StreamlitSecretNotFoundError):
+            value = ''
+    return str(value).strip()
+
+API_KEY = setting('GOOGLE_API_KEY')
+CSE_ID = setting('GOOGLE_CSE_ID')
+PAGESPEED_API_KEY = setting('PAGESPEED_API_KEY')
 
 # Pre-compiled regex for better performance
 DATE_PATTERN = re.compile(r'(\w+\s\d{1,2},\s\d{4})|(\d{4}-\d{2}-\d{2})')
@@ -95,27 +109,7 @@ def get_pagespeed_metrics(url):
 
 
 def google_search(query, num_results):
-    """Search Google Custom Search API with error handling"""
-    url = "https://www.googleapis.com/customsearch/v1"
-    all_items = []
-    session = get_session()
-    
-    for i in range(0, num_results, 10):
-        params = {
-            "key": API_KEY,
-            "cx": CSE_ID,
-            "q": query,
-            "start": i + 1,
-        }
-        try:
-            res = session.get(url, params=params, timeout=10)
-            res.raise_for_status()
-            all_items.extend(res.json().get("items", []))
-        except requests.exceptions.RequestException as e:
-            st.error(f"❌ Lỗi API Google (lần thử {i//10 + 1}): {str(e)}")
-            break
-    
-    return all_items
+    return search_google(get_session(), query, num_results, API_KEY, CSE_ID)
 
 
 @st.cache_data(ttl=3600)

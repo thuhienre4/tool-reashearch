@@ -2,6 +2,7 @@
 from pathlib import Path
 from time import perf_counter
 import json
+from search_api import SearchError
 
 
 def render(st, pd, search, detect, project_info, extract_domain):
@@ -66,6 +67,9 @@ def render(st, pd, search, detect, project_info, extract_domain):
                     return value.value if pd.notna(value) else -9223372036854775808
                 rows.sort(key=date_key, reverse=True)
                 st.session_state.update(ket_qua_loc=rows, elapsed=round(perf_counter() - started, 1), searched=True, keywords=keyword.strip() or industry)
+            except SearchError as exc:
+                st.error(str(exc))
+                st.info('Lượt tìm kiếm chưa hoàn tất. Kết quả của lần tìm trước (nếu có) được giữ lại.')
             except Exception as exc:
                 st.error(f'Không thể hoàn tất tìm kiếm: {type(exc).__name__}')
     rows = st.session_state.ket_qua_loc
