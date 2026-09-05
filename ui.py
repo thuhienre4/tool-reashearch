@@ -102,4 +102,5 @@ def render(st, pd, search, detect, project_info, extract_domain):
     st.markdown('<div id="huong-dan"></div>', unsafe_allow_html=True)
     with st.expander('ⓘ Hướng dẫn sử dụng'):
         st.write('Chọn ngành, nhập tên miền hoặc từ khóa tùy chọn, rồi nhấn Bắt đầu lọc dự án. Xuất CSV để mở kết quả trong Excel hoặc Lưu kết quả để tải dữ liệu JSON.')
-        st.caption('Kết quả lấy qua Google Custom Search. Phát hiện quảng cáo dựa trên tín hiệu trong mã HTML của website.')
+        st.caption('Kết quả tìm kiếm Google được cung cấp qua Serper. Phát hiện quảng cáo dựa trên tín hiệu trong mã HTML của website.')
+        st.write('Cấu hình SERPER_API_KEY trong Streamlit Settings → Secrets. Không cần Google API key hoặc CSE ID. Mỗi lần lọc có thể dùng nhiều lượt API tùy số kết quả.')

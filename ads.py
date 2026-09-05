@@ -11,7 +11,7 @@ from urllib.parse import urlparse
 
 from dotenv import load_dotenv
 from pathlib import Path
-from search_api import search_google
+from search_api import search_serper
 
 load_dotenv(Path(__file__).with_name('.env'))
 
@@ -24,8 +24,7 @@ def setting(name):
             value = ''
     return str(value).strip()
 
-API_KEY = setting('GOOGLE_API_KEY')
-CSE_ID = setting('GOOGLE_CSE_ID')
+SERPER_API_KEY = setting('SERPER_API_KEY')
 PAGESPEED_API_KEY = setting('PAGESPEED_API_KEY')
 
 # Pre-compiled regex for better performance
@@ -108,8 +107,8 @@ def get_pagespeed_metrics(url):
         return None
 
 
-def google_search(query, num_results):
-    return search_google(get_session(), query, num_results, API_KEY, CSE_ID)
+def search_projects(query, num_results):
+    return search_serper(get_session(), query, num_results, SERPER_API_KEY)
 
 
 @st.cache_data(ttl=3600)
@@ -139,7 +138,7 @@ def has_ads_signals(url):
 def extract_project_date(item):
     """Extract and standardize project date from item metadata"""
     pagemap = item.get("pagemap", {})
-    date = None
+    date = item.get('date')
     
     # Priority 1: Check metatags
     if "metatags" in pagemap:
@@ -210,4 +209,4 @@ def get_project_info(item):
 
 from ui import render
 
-render(st, pd, google_search, has_ads_signals, get_project_info, extract_domain)
+render(st, pd, search_projects, has_ads_signals, get_project_info, extract_domain)

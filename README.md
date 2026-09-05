@@ -1,175 +1,58 @@
-# AffiScan - Bộ Lọc Dự Án Affiliate Có Quảng Cáo Google
+# AffiScan — tìm kiếm affiliate qua Serper
 
-**AffiScan** là một công cụ tìm kiếm và phân tích các dự án affiliate có dấu hiệu chạy quảng cáo Google, được xây dựng bằng Streamlit và Google Custom Search API.
+App dùng kết quả Google từ Serper, lọc domain và kiểm tra tín hiệu quảng cáo/affiliate trong HTML. Giao diện Streamlit, xuất CSV/JSON, PageSpeed tùy chọn.
 
-## 🎯 Tính Năng
+## Cấu hình trên Streamlit Cloud
 
-- 🔍 **Tìm kiếm dự án affiliate** theo ngành nghề
-- 🎯 **Lọc theo domain** cụ thể
-- 🔑 **Tìm kiếm bằng từ khóa** bổ sung
-- 📊 **Phân tích Website Performance** (Performance, SEO, Best Practices)
-- 💾 **Xuất kết quả CSV** để phân tích ngoài
-- ⚡ **Tối ưu hiệu suất** với caching và connection pooling
+1. Đăng ký tại https://serper.dev và lấy API key trong tài khoản của bạn.
+2. Mở app → Settings → Secrets, thêm:
 
-## 📋 Yêu Cầu
-
-- Python 3.8+
-- Tài khoản Google Cloud với API Custom Search được kích hoạt
-
-## 🚀 Cài Đặt
-
-### 1. Clone Repository
-
-```bash
-git clone https://github.com/YOUR_USERNAME/affiscan.git
-cd affiscan
+```toml
+SERPER_API_KEY = "your_serper_api_key_here"
 ```
 
-### 2. Tạo Virtual Environment
+3. Save và khởi động lại app.
+4. Chọn ngành, nhập từ khóa/domain tùy chọn và bắt đầu lọc.
 
-**Windows:**
-```bash
-python -m venv venv
-venv\Scripts\activate
-```
+Không cần `GOOGLE_API_KEY` hoặc `GOOGLE_CSE_ID` nữa. Có thể xóa hai cấu hình cũ. Không đưa key thật vào GitHub. Khi chưa có key, app vẫn mở được và hướng dẫn cấu hình khi tìm kiếm.
 
-**macOS/Linux:**
-```bash
-python3 -m venv venv
-source venv/bin/activate
-```
+## Chạy trên máy
 
-### 3. Cài Đặt Dependencies
+Python 3.10 trở lên. Cài thư viện:
 
 ```bash
 pip install -r requirements.txt
 ```
 
-### 4. Cấu Hình API Credentials
-
-1. Tạo file `.env` từ template:
-```bash
-cp .env.example .env
-```
-
-2. Mở `.env` và điền thông tin:
-
-#### Lấy Google Custom Search API Key:
-
-- Truy cập: https://console.cloud.google.com/
-- Tạo project mới hoặc chọn project hiện tại
-- Kích hoạt "Custom Search API"
-- Tạo API Key từ "Credentials"
-- Copy `GOOGLE_API_KEY` vào file `.env`
-
-#### Lấy Custom Search Engine ID:
-
-- Truy cập: https://cse.google.com/cse/all
-- Tạo search engine mới hoặc chọn cái cũ
-- Copy ID vào `GOOGLE_CSE_ID` trong `.env`
-
-#### Google PageSpeed Insights API (Tùy chọn):
-
-- Có thể lấy từ cùng Google Cloud Console
-- Nếu không có, app vẫn hoạt động nhưng sẽ không hiển thị performance metrics
-
-**File `.env` ví dụ:**
-```env
-GOOGLE_API_KEY=AIzaSyCtcz_viHAADq3OIBIvi_is-vCmpb01TEk
-GOOGLE_CSE_ID=d3deb6056c8744d3b
-PAGESPEED_API_KEY=optional_key_here
-```
-
-## 🎮 Chạy Ứng Dụng
+Sao chép `.env.example` thành `.env` cạnh `ads.py`, điền key, rồi chạy:
 
 ```bash
 streamlit run ads.py
 ```
 
-App sẽ tự động mở tại: **http://localhost:8501**
+Biến môi trường (bao gồm `.env`) được ưu tiên trước Streamlit Secrets. `PAGESPEED_API_KEY` tùy chọn; để trống nếu không cần điểm hiệu năng website.
 
-## 📖 Hướng Dẫn Sử Dụng
+## Sử dụng
 
-1. **Chọn Ngành** từ danh sách (Wordpress, AI, Marketing, etc.)
-2. **Nhập Domain** (tùy chọn): Lọc kết quả chỉ từ domain này
-3. **Nhập Từ Khóa** (tùy chọn): Thêm từ khóa tìm kiếm
-4. **Điều Chỉnh Số Kết Quả**: Slider 10-50 kết quả
-5. **Click "🚀 Bắt Đầu Lọc"** để bắt đầu tìm kiếm
+- Tối đa 100 kết quả; nhiều domain cách nhau bằng dấu phẩy.
+- Gọi Serper theo trang 10 kết quả. Một lần lọc có thể dùng nhiều lượt API và trả ít hơn số kết quả đã chọn.
+- Tín hiệu HTML không chứng minh website đang mua Google Ads.
+- Ngày từ kết quả tìm kiếm không nhất thiết là ngày ra mắt dự án; thiếu ngày sẽ hiển thị “Không rõ”.
+- CSV hỗ trợ tiếng Việt trong Excel; JSON lưu toàn bộ kết quả.
+- API lỗi sẽ giữ kết quả lần trước và báo lỗi, không coi là lượt tìm thành công.
 
-## 📊 Kết Quả Hiển Thị
+## Khắc phục lỗi
 
-Mỗi kết quả hiển thị:
-- 📝 **Tên Dự Án + Domain**
-- 📄 **Mô Tả** (150 ký tự đầu)
-- 📊 **Website Performance** (nếu có PageSpeed API):
-  - 🟢 = Tốt (>= 80)
-  - 🟡 = Trung bình (50-79)
-  - 🔴 = Cần cải thiện (< 50)
-- 👉 **Link Đăng Ký**
-- 🔗 **Link Thông Tin Chi Tiết**
-- ⏰ **Thời Gian Ra Mắt**
+- Thiếu key/401: kiểm tra `SERPER_API_KEY`.
+- 403: kiểm tra quyền key và trạng thái tài khoản Serper.
+- 402: kiểm tra credits.
+- 429: giảm tần suất và kiểm tra hạn mức.
+- Lỗi mạng/5xx: thử lại sau.
 
-## 💾 Xuất Kết Quả
+## Kiểm tra
 
-- Nhấn nút **"⬇️ Tải kết quả CSV"** để tải file CSV
-- Mở trong Excel hoặc Google Sheets để phân tích
-
-## 🔧 Tối Ưu Hóa
-
-App có các tối ưu hóa sau:
-
-- **Connection Pooling**: Tái sử dụng kết nối HTTP
-- **Retry Logic**: Tự động thử lại khi API lỗi
-- **Caching**: Cache kết quả kiểm tra ads 1 giờ
-- **Regex Pre-compiled**: Biên dịch regex một lần
-
-## 📁 Cấu Trúc Thư Mục
-
-```
-affiscan/
-├── ads.py                 # Ứng dụng chính
-├── requirements.txt       # Dependencies
-├── .env.example          # Template biến môi trường
-├── .gitignore           # Git ignore file
-├── README.md            # File này
-└── LICENSE              # Giấy phép (tùy chọn)
+```bash
+python -m unittest test_search_api
 ```
 
-## 🐛 Troubleshooting
-
-### Lỗi: "API Credentials Missing"
-- Đảm bảo file `.env` tồn tại và có `GOOGLE_API_KEY` + `GOOGLE_CSE_ID`
-- Kiểm tra API keys có hợp lệ không
-
-### Lỗi: "Timeout khi kiểm tra URL"
-- URL nó quá chậm hoặc không phản hồi
-- App sẽ skip và tiếp tục với URL tiếp theo
-
-### Không thấy Performance Metrics
-- `PAGESPEED_API_KEY` chưa được cấu hình
-- Thêm vào `.env` nếu muốn có metrics
-
-## 📝 License
-
-MIT License - Tự do sử dụng và chỉnh sửa
-
-## 🤝 Đóng Góp
-
-Nếu bạn tìm được bug hoặc có ý tưởng cải thiện:
-1. Fork repository
-2. Tạo branch mới (`git checkout -b feature/improvement`)
-3. Commit thay đổi (`git commit -m "Add improvement"`)
-4. Push lên branch (`git push origin feature/improvement`)
-5. Tạo Pull Request
-
-## 📞 Liên Hệ
-
-Nếu có câu hỏi hoặc vấn đề, vui lòng tạo **Issue** trên GitHub.
-
-## ⭐ Yêu Cầu
-
-Nếu bạn thấy công cụ này hữu ích, hãy **⭐ Star** repository!
-
----
-
-**Made with ❤️ for Affiliate Marketers**
+Kiểm tra dùng dữ liệu giả lập, không tiêu tốn credits. Cần key thật để kiểm tra kết nối Serper thực tế.
