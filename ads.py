@@ -197,7 +197,7 @@ def get_project_info(item):
         "Domain": domain_name,
         "Link thông tin dự án": link,
         "Link đăng ký": link_dang_ky,
-        "Thời gian ra mắt": date_ra_mat,
+        "Ngày nội dung": date_ra_mat,
         "PageSpeed Metrics": pagespeed_metrics
     }
 

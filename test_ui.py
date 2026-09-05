@@ -52,6 +52,17 @@ class DashboardTests(unittest.TestCase):
         self.assertEqual(app.session_state['ket_qua_loc'], old_rows)
         self.assertTrue(app.error)
 
+    def test_traffic_filter_requires_source_before_search(self):
+        fixture = FIXTURE.replace('def search(query, count):', "def search(query, count):\n    st.session_state['called_search'] = True")
+        app = AppTest.from_string(fixture).run()
+        app.number_input[0].set_value(10000)
+        app.button[1].click().run()
+        self.assertFalse(app.exception)
+        self.assertTrue(app.error)
+        self.assertNotIn('called_search', app.session_state.filtered_state)
+        app.button[0].click().run()
+        self.assertEqual(app.number_input[0].value, 0)
+
 
 if __name__ == '__main__':
     unittest.main()

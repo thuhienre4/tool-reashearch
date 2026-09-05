@@ -47,6 +47,27 @@ Biến môi trường (bao gồm `.env`) được ưu tiên trước Streamlit S
 
 ## Khắc phục lỗi
 
+## Lọc dự án mới và traffic
+
+Mở **Dự án mới, độ phù hợp & lượt truy cập** trong bộ lọc:
+
+- Chọn **Ngày nội dung trên Google** để lọc nội dung trong 3/6/12 tháng. App thêm mốc ngày vào truy vấn và kiểm tra lại ngày trong kết quả. Đây không phải ngày ra mắt dự án; ngày thiếu hoặc không đọc được sẽ không vượt bộ lọc.
+- Chọn **Ngày ra mắt từ báo cáo** nếu có nguồn xác nhận ngày ra mắt trong CSV. App không tự xác minh nội dung nguồn và không suy ra ngày ra mắt từ tuổi domain/ngày bài viết.
+- Đặt **Lượt truy cập/tháng tối thiểu**, ví dụ 10000. Đặt 0 để không lọc traffic. Chỉ dùng số liệu của tháng đã hoàn tất, trong 3 tháng gần nhất; dữ liệu thiếu/cũ bị loại.
+- Chọn điểm phù hợp tối thiểu. Điểm này đánh giá độ phù hợp affiliate theo quy tắc, không dự đoán lợi nhuận hoặc tăng trưởng.
+
+Serper không cung cấp lượt truy cập. Trong **Dữ liệu ngày ra mắt & traffic**, tải mẫu CSV rồi điền từ báo cáo bạn có quyền sử dụng. Không bắt buộc mua thêm API. Schema:
+
+```text
+domain,monthly_visits,traffic_month,traffic_source,launched_at,launch_source
+```
+
+`domain` bắt buộc. Traffic cần đủ `monthly_visits` (số nguyên không dấu phân cách), `traffic_month` (YYYY-MM) và `traffic_source` (nhà cung cấp/báo cáo). Ngày ra mắt cần `launched_at` (YYYY-MM-DD) và `launch_source` (nguồn công bố). Có thể bỏ trống một nhóm nếu không có. Mỗi tên miền gốc chỉ có một dòng; tối đa 5.000 dòng và 2 MB, UTF-8. Dữ liệu chỉ lưu trong phiên làm việc Streamlit, không ghi lên GitHub.
+
+Số liệu nhà cung cấp có thể là ước tính. Bảng và file xuất ghi rõ tháng và nguồn để kiểm tra lại. Không có dữ liệu được giữ là trống, không biến thành 0 lượt.
+
+## Lỗi cấu hình/dịch vụ
+
 - Thiếu key/401: kiểm tra `SERPER_API_KEY`.
 - 403: kiểm tra quyền key và trạng thái tài khoản Serper.
 - 402: kiểm tra credits.
@@ -56,7 +77,7 @@ Biến môi trường (bao gồm `.env`) được ưu tiên trước Streamlit S
 ## Kiểm tra
 
 ```bash
-python -m unittest test_search_api test_discovery
+python -m unittest test_search_api test_discovery test_project_filters test_ui
 ```
 
 Kiểm tra dùng dữ liệu giả lập, không tiêu tốn credits. Cần key thật để kiểm tra kết nối Serper thực tế.

@@ -88,8 +88,10 @@ def rank_candidate(item, keyword=''):
                 roundup=roundup, root_domain=root_domain(item['link']))
 
 
-def discover(search, industry, keyword, hosts, count, include_roundups=False):
+def discover(search, industry, keyword, hosts, count, include_roundups=False, candidate_filter=None, recent_after=None):
     queries = build_queries(industry, keyword, hosts)
+    if recent_after:
+        queries = [query + ' after:' + recent_after for query in queries]
     # One page per query, then round-robin second/third pages by increasing
     # requested count. Keep all calls bounded, including calls made by adapter.
     per_query = 10 if count <= 30 else 20 if count <= 50 else 30
@@ -112,6 +114,8 @@ def discover(search, industry, keyword, hosts, count, include_roundups=False):
     result, domains = [], set()
     for item in ranked:
         if item['rank_score'] < (20 if include_roundups else 50) or (item['roundup'] and not include_roundups):
+            continue
+        if candidate_filter and not candidate_filter(item):
             continue
         if item['root_domain'] in domains:
             continue
