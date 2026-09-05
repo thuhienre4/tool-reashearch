@@ -18,6 +18,26 @@ render(st, pd, search, detect, info, lambda url: url.split('/')[2])
 
 
 class DashboardTests(unittest.TestCase):
+    def test_suffix_filter_and_reset(self):
+        app = AppTest.from_string(FIXTURE).run()
+        app.multiselect[0].set_value(['.ai'])
+        app.button[1].click().run()
+        self.assertFalse(app.exception)
+        self.assertEqual(app.session_state['ket_qua_loc'], [])
+        app.multiselect[0].set_value(['.co.uk'])
+        app.button[1].click().run()
+        self.assertEqual(len(app.session_state['ket_qua_loc']), 1)
+        app.button[0].click().run()
+        self.assertEqual(app.multiselect[0].value, [])
+
+    def test_suffix_checked_after_redirect(self):
+        fixture = FIXTURE.replace("'final_url': url", "'final_url': 'https://elsewhere.net/affiliate'")
+        app = AppTest.from_string(fixture).run()
+        app.multiselect[0].set_value(['.co.uk'])
+        app.button[1].click().run()
+        self.assertFalse(app.exception)
+        self.assertEqual(app.session_state['ket_qua_loc'], [])
+
     def test_real_app_loads(self):
         app = AppTest.from_file(str(Path(__file__).with_name('ads.py')), default_timeout=30).run()
         self.assertFalse(app.exception)

@@ -35,6 +35,7 @@ Biến môi trường (bao gồm `.env`) được ưu tiên trước Streamlit S
 ## Sử dụng
 
 - Tối đa 100 kết quả; nhiều domain cách nhau bằng dấu phẩy.
+- **Đuôi tên miền**: chọn một hoặc nhiều đuôi như `.com`, `.io`, `.ai`, `.com.vn`, `.co.uk`. Để trống để tìm mọi đuôi. Các đuôi được kết hợp bằng OR, còn domain cụ thể và các bộ lọc khác áp dụng đồng thời. Kiểm tra cả URL kết quả và URL sau chuyển hướng. `.com` không khớp `.com.vn`; `.vn` bao gồm `.com.vn`.
 - Tìm bằng tối đa 6 truy vấn theo ngách thay vì một truy vấn duy nhất. Dùng tối đa 6 lượt API khi chọn 10–30 kết quả, 12 khi chọn 50, 18 khi chọn 100. Có thể trả ít hơn số đã chọn.
 - Chấm điểm theo tiêu đề/mô tả, URL chương trình, thông tin tham gia/hoa hồng và từ khóa. Đây là điểm quy tắc, không phải xác suất hoặc xác nhận trang chính thức.
 - Mặc định bỏ bài tổng hợp/hướng dẫn; có tùy chọn bao gồm bài tham khảo. Gộp subdomain theo tên miền đăng ký (hỗ trợ co.uk và tên miền nền tảng riêng), tối đa một kết quả mỗi tên miền gốc.

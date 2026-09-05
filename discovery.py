@@ -41,7 +41,13 @@ def canonical_url(url):
     return urlunsplit((parsed.scheme.lower(), parsed.netloc.lower(), parsed.path.rstrip('/'), urlencode(sorted(query)), ''))
 
 
-def build_queries(industry, keyword='', hosts=()):
+def matches_suffix(url, suffixes=()):
+    """Match the hostname boundary, never a substring in the path or query."""
+    host = (urlsplit(url if '://' in url else 'https://' + url).hostname or '').lower().rstrip('.')
+    return not suffixes or any(host.endswith('.' + suffix.lower().lstrip('.')) for suffix in suffixes)
+
+
+def build_queries(industry, keyword='', hosts=(), suffixes=()):
     topics = TOPICS.get(industry, [industry])
     intents = ['"affiliate program"', '"partner program" commission', '"referral program"']
     queries = []
@@ -51,6 +57,8 @@ def build_queries(industry, keyword='', hosts=()):
         query = f'{topic} {keyword.strip()} {intent}'.strip()
         if hosts:
             query += ' (' + ' OR '.join('site:' + host for host in hosts) + ')'
+        if suffixes:
+            query += ' (' + ' OR '.join('site:' + suffix.lstrip('.') for suffix in suffixes) + ')'
         queries.append(query)
     return list(dict.fromkeys(queries))
 
@@ -88,8 +96,8 @@ def rank_candidate(item, keyword=''):
                 roundup=roundup, root_domain=root_domain(item['link']))
 
 
-def discover(search, industry, keyword, hosts, count, include_roundups=False, candidate_filter=None, recent_after=None):
-    queries = build_queries(industry, keyword, hosts)
+def discover(search, industry, keyword, hosts, count, include_roundups=False, candidate_filter=None, recent_after=None, suffixes=()):
+    queries = build_queries(industry, keyword, hosts, suffixes)
     if recent_after:
         queries = [query + ' after:' + recent_after for query in queries]
     # One page per query, then round-robin second/third pages by increasing
@@ -104,6 +112,8 @@ def discover(search, industry, keyword, hosts, count, include_roundups=False, ca
             if parsed.scheme not in ('http', 'https') or not host:
                 continue
             if hosts and not any(host == allowed or host.endswith('.' + allowed) for allowed in hosts):
+                continue
+            if not matches_suffix(url, suffixes):
                 continue
             ranked = rank_candidate(item, keyword)
             key = canonical_url(url)

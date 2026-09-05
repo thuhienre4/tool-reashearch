@@ -1,5 +1,5 @@
 import unittest
-from discovery import root_domain, canonical_url, rank_candidate, discover, build_queries, inspect_html
+from discovery import root_domain, canonical_url, rank_candidate, discover, build_queries, inspect_html, matches_suffix
 
 
 def item(url, title='Travel Affiliate Program', snippet='Join our affiliate program and earn commission'):
@@ -7,6 +7,22 @@ def item(url, title='Travel Affiliate Program', snippet='Join our affiliate prog
 
 
 class DiscoveryTests(unittest.TestCase):
+    def test_suffix_boundaries(self):
+        self.assertTrue(matches_suffix('https://PARTNER.EXAMPLE.IO./affiliate', ['.com', '.io']))
+        self.assertFalse(matches_suffix('https://example.com.vn', ['.com']))
+        self.assertTrue(matches_suffix('https://example.com.vn', ['.vn']))
+        self.assertFalse(matches_suffix('https://example.ai.evil.org/com?next=example.com', ['.com', '.ai']))
+        self.assertTrue(matches_suffix('https://example.net', []))
+
+    def test_suffix_discovery_and_query(self):
+        calls = []
+        def search(query, count):
+            calls.append(query)
+            return [item('https://brand.com/affiliate'), item('https://brand.ai/affiliate'), item('https://brand.net/affiliate')]
+        rows, _ = discover(search, 'Travel', '', [], 20, suffixes=['.com', '.ai'])
+        self.assertEqual({row['root_domain'] for row in rows}, {'brand.com', 'brand.ai'})
+        self.assertTrue(all('(site:com OR site:ai)' in query for query in calls))
+
     def test_registered_domains(self):
         self.assertEqual(root_domain('https://partners.example.co.uk/a'), 'example.co.uk')
         self.assertEqual(root_domain('https://www.example.co.uk/b'), 'example.co.uk')

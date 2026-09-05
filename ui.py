@@ -3,7 +3,7 @@ from pathlib import Path
 from time import perf_counter
 import json
 from search_api import SearchError
-from discovery import discover, root_domain
+from discovery import discover, root_domain, matches_suffix
 from datetime import date
 from project_filters import read_metrics, passes_filters, months_ago, METRICS_TEMPLATE
 
@@ -14,11 +14,11 @@ def render(st, pd, search, detect, project_info, extract_domain):
     st.markdown('''<nav class="nav"><a class="brand" href="#"><span class="brand-icon">⌕</span>Affi<span>Scan</span><small>Beta</small></a><div class="nav-links"><a class="active" href="#">⌂ &nbsp; Trang chủ</a><a href="#huong-dan">ⓘ &nbsp; Hướng dẫn</a><a href="#ket-qua">▤ &nbsp; Kết quả</a></div><a class="docs" href="#huong-dan">▣ &nbsp; Tài liệu hướng dẫn</a></nav>
 <section class="hero"><div class="hero-copy"><span class="eyebrow">✧ Công cụ SEO & Affiliate Marketing</span><h1>AffiScan - Bộ Lọc Dự Án <em>Affiliate</em><br>Có Quảng Cáo <em>Google</em></h1><p>Tìm kiếm, phân tích và lọc các dự án/website affiliate có dấu hiệu quảng cáo Google<br>để khám phá từ khóa, ngách tiềm năng và cơ hội kinh doanh.</p></div><div class="hero-art"><div class="orbit"></div><div class="analytics"><div class="window-dots">● ● ●</div><div class="ad-logo">A</div><b>Google Ads</b><div class="search-line">⌕</div><div class="bars"><i></i><i></i><i></i><i></i></div></div><div class="float-card data">▥ <span>Dữ liệu thực tế<br><b>Cập nhật liên tục</b></span></div><div class="float-card growth">↗ <span>Tìm cơ hội<br><b>Nhanh hơn</b></span></div><div class="float-card shield">◆ <span>Phân tích đối thủ<br><b>dễ dàng</b></span></div></div></section>''', unsafe_allow_html=True)
     industries = ['WordPress', 'AI', 'Marketing', 'Edu LMS', 'Travel', 'Game', 'Bitcoin', 'finance app', 'E-commerce', 'Digital Tools & Services', 'Hosting', 'Online Education', 'Software', 'Baby Products', 'Remote Work Tools', 'Hosting & Website Building', 'Pet Products']
-    for key, value in dict(ket_qua_loc=[], elapsed=0, searched=False, keywords='', count=20, discovery_stats={}, include_roundups=False, require_ads=False, new_basis='Không lọc', new_months=6, min_visits=0, min_score=50).items():
+    for key, value in dict(ket_qua_loc=[], elapsed=0, searched=False, keywords='', count=20, discovery_stats={}, include_roundups=False, require_ads=False, new_basis='Không lọc', new_months=6, min_visits=0, min_score=50, suffixes=[]).items():
         st.session_state.setdefault(key, value)
 
     def reset():
-        st.session_state.update(industry='WordPress', domains='', keyword='', count=20, ket_qua_loc=[], elapsed=0, searched=False, keywords='', discovery_stats={}, include_roundups=False, require_ads=False, new_basis='Không lọc', new_months=6, min_visits=0, min_score=50)
+        st.session_state.update(industry='WordPress', domains='', keyword='', count=20, ket_qua_loc=[], elapsed=0, searched=False, keywords='', discovery_stats={}, include_roundups=False, require_ads=False, new_basis='Không lọc', new_months=6, min_visits=0, min_score=50, suffixes=[])
 
     left, right = st.columns([1.55, 1], gap='small')
     with left, st.container(border=True):
@@ -40,6 +40,8 @@ def render(st, pd, search, detect, project_info, extract_domain):
             with b:
                 count = st.selectbox('☷ Số kết quả', [10, 20, 30, 50, 100], key='count')
                 st.caption('Tối đa 100 kết quả. Các domain cách nhau bằng dấu phẩy.')
+            st.multiselect('Đuôi tên miền', ['.com', '.io', '.ai', '.net', '.org', '.co', '.app', '.dev', '.tech', '.store', '.xyz', '.me', '.info', '.biz', '.vn', '.com.vn', '.uk', '.co.uk', '.us', '.de', '.fr', '.ca', '.au', '.com.au'], key='suffixes', placeholder='Tất cả đuôi tên miền')
+            st.caption('Chọn nhiều đuôi để tìm kết quả thuộc bất kỳ đuôi nào đã chọn. Để trống = tất cả; bộ lọc domain cụ thể vẫn áp dụng đồng thời.')
             st.checkbox('Bao gồm bài tổng hợp / hướng dẫn', key='include_roundups')
             st.checkbox('Chỉ giữ trang có mã Google Ads', key='require_ads')
             with st.expander('Dự án mới, độ phù hợp & lượt truy cập'):
@@ -80,8 +82,11 @@ def render(st, pd, search, detect, project_info, extract_domain):
                 def matches(item, domain=None):
                     return passes_filters(item, metrics.get(domain or item['root_domain'], {}), age, basis, st.session_state.min_visits, st.session_state.min_score)
                 hosts = [extract_domain('https://' + d.strip().removeprefix('https://').removeprefix('http://')).lower() for d in domains.split(',') if d.strip()]
+                suffixes = st.session_state.suffixes
+                if hosts and suffixes and not any(matches_suffix(host, suffixes) for host in hosts):
+                    raise SearchError('Domain cụ thể không thuộc đuôi tên miền đã chọn. Đổi đuôi hoặc xóa domain để tiếp tục.')
                 after = months_ago(date.today(), age).isoformat() if age and basis == 'content' else None
-                results, discovery_stats = discover(search, industry, keyword.strip(), hosts, count, st.session_state.include_roundups, candidate_filter=matches, recent_after=after)
+                results, discovery_stats = discover(search, industry, keyword.strip(), hosts, count, st.session_state.include_roundups, candidate_filter=matches, recent_after=after, suffixes=suffixes)
                 rows = []
                 final_domains = set()
                 progress = st.progress(0)
@@ -91,7 +96,7 @@ def render(st, pd, search, detect, project_info, extract_domain):
                     final_link = evidence.get('final_url', link)
                     final_host = extract_domain(final_link).lower()
                     final_domain = root_domain(final_link)
-                    allowed = not hosts or any(final_host == d or final_host.endswith('.' + d) for d in hosts)
+                    allowed = (not hosts or any(final_host == d or final_host.endswith('.' + d) for d in hosts)) and matches_suffix(final_link, suffixes)
                     if allowed and final_domain not in final_domains and matches(item, final_domain) and (not st.session_state.require_ads or evidence['ads']):
                         row = project_info(item)
                         record = metrics.get(final_domain, {})
